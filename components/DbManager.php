@@ -108,8 +108,7 @@ class DbManager extends \yii\rbac\DbManager
      */
     public function getAssignments($userId)
     {
-        $this->loadAssignments($userId);
-
+        $this->loadAssignments(strtoupper($userId));
         return isset($this->_assignments[$userId]) ? $this->_assignments[$userId] : [];
     }
 
@@ -584,15 +583,16 @@ class DbManager extends \yii\rbac\DbManager
     {
         $part = self::PART_ITEMS;
         if ($this->_items === null && ($this->_items = $this->getFromCache($part)) === false) {
-            $query = (new Query)->from($this->itemTable);
+            $query = (new Query)->from(strtoupper($this->itemTable));
 
             $this->_items = [];
             foreach ($query->all($this->db) as $row) {
-                $this->_items[$row['NAME']] = $this->populateItem($row);
+                $this->_items[strtoupper($row['NAME'])] = $this->populateItem($row);
             }
             $this->saveToCache($part, $this->_items);
         }
     }
+
 
     /**
      * Load data. If avaliable in memory, get from memory
@@ -644,14 +644,14 @@ class DbManager extends \yii\rbac\DbManager
     {
         if (!isset($this->_assignments[$userId]) && !empty($userId)) {
             $query = (new Query)
-                ->from($this->assignmentTable)
-                ->where(['USER_ID' => (string) $userId]);
+                ->from(strtoupper($this->assignmentTable)) // Ensure table name is uppercase
+                ->where(['USER_ID' => strtoupper((string) $userId)]); // Ensure column names are uppercase
 
             $this->_assignments[$userId] = [];
             foreach ($query->all($this->db) as $row) {
-                $this->_assignments[$userId][$row['ITEM_NAME']] = new Assignment([
+                $this->_assignments[$userId][strtoupper($row['ITEM_NAME'])] = new Assignment([
                     'userId' => $row['USER_ID'],
-                    'roleName' => $row['ITEM_NAME'],
+                    'roleName' => strtoupper($row['ITEM_NAME']),
                     'createdAt' => $row['CREATED_AT'],
                 ]);
             }

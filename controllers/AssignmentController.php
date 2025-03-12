@@ -100,7 +100,7 @@ class AssignmentController extends Controller
         $assigned = [];
         foreach ($authManager->getRolesByUser($id) as $role) {
             $type = $role->TYPE;
-            $assigned[$type == Item::TYPE_ROLE ? 'Roles' : 'Permissions'][$role->NAME] = $role->NAME;
+            $assigned[$type == Item::TYPE_ROLE ? 'Roles' : 'Permissions'][strtoupper($role->NAME)] = strtoupper($role->NAME);
         }
         foreach ($authManager->getRoles() as $role) {
             if (!isset($assigned['Roles'][$role->NAME])) {
