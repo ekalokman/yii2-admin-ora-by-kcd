@@ -588,7 +588,7 @@ class DbManager extends \yii\rbac\DbManager
 
             $this->_items = [];
             foreach ($query->all($this->db) as $row) {
-                $this->_items[$row['name']] = $this->populateItem($row);
+                $this->_items[$row['NAME']] = $this->populateItem($row);
             }
             $this->saveToCache($part, $this->_items);
         }
@@ -629,7 +629,7 @@ class DbManager extends \yii\rbac\DbManager
             foreach ($query->all($this->db) as $row) {
                 $rule = @unserialize($row['data']);
                 if ($rule instanceof Rule) {
-                    $this->_rules[$row['name']] = $rule;
+                    $this->_rules[$row['NAME']] = $rule;
                 }
             }
             $this->saveToCache($part, $this->_rules);
@@ -645,14 +645,14 @@ class DbManager extends \yii\rbac\DbManager
         if (!isset($this->_assignments[$userId]) && !empty($userId)) {
             $query = (new Query)
                 ->from($this->assignmentTable)
-                ->where(['user_id' => (string) $userId]);
+                ->where(['USER_ID' => (string) $userId]);
 
             $this->_assignments[$userId] = [];
             foreach ($query->all($this->db) as $row) {
-                $this->_assignments[$userId][$row['item_name']] = new Assignment([
-                    'userId' => $row['user_id'],
-                    'roleName' => $row['item_name'],
-                    'createdAt' => $row['created_at'],
+                $this->_assignments[$userId][$row['ITEM_NAME']] = new Assignment([
+                    'userId' => $row['USER_ID'],
+                    'roleName' => $row['ITEM_NAME'],
+                    'createdAt' => $row['CREATED_AT'],
                 ]);
             }
         }
