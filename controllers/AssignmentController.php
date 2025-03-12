@@ -99,17 +99,17 @@ class AssignmentController extends Controller
         $avaliable = [];
         $assigned = [];
         foreach ($authManager->getRolesByUser($id) as $role) {
-            $type = $role->type;
-            $assigned[$type == Item::TYPE_ROLE ? 'Roles' : 'Permissions'][$role->name] = $role->name;
+            $type = $role->TYPE;
+            $assigned[$type == Item::TYPE_ROLE ? 'Roles' : 'Permissions'][$role->NAME] = $role->NAME;
         }
         foreach ($authManager->getRoles() as $role) {
-            if (!isset($assigned['Roles'][$role->name])) {
-                $avaliable['Roles'][$role->name] = $role->name;
+            if (!isset($assigned['Roles'][$role->NAME])) {
+                $avaliable['Roles'][$role->NAME] = $role->NAME;
             }
         }
         foreach ($authManager->getPermissions() as $role) {
-            if ($role->name[0] !== '/' && !isset($assigned['Permissions'][$role->name])) {
-                $avaliable['Permissions'][$role->name] = $role->name;
+            if ($role->NAME[0] !== '/' && !isset($assigned['Permissions'][$role->NAME])) {
+                $avaliable['Permissions'][$role->NAME] = $role->NAME;
             }
         }
 
@@ -179,17 +179,17 @@ class AssignmentController extends Controller
         $avaliable = [];
         $assigned = [];
         foreach ($authManager->getRolesByUser($id) as $role) {
-            $type = $role->type;
-            $assigned[$type == Item::TYPE_ROLE ? 'Roles' : 'Permissions'][$role->name] = $role->name;
+            $type = $role->TYPE;
+            $assigned[$type == Item::TYPE_ROLE ? 'Roles' : 'Permissions'][$role->NAME] = $role->NAME;
         }
         foreach ($authManager->getRoles() as $role) {
-            if (!isset($assigned['Roles'][$role->name])) {
-                $avaliable['Roles'][$role->name] = $role->name;
+            if (!isset($assigned['Roles'][$role->NAME])) {
+                $avaliable['Roles'][$role->NAME] = $role->NAME;
             }
         }
         foreach ($authManager->getPermissions() as $role) {
-            if ($role->name[0] !== '/' && !isset($assigned['Permissions'][$role->name])) {
-                $avaliable['Permissions'][$role->name] = $role->name;
+            if ($role->NAME[0] !== '/' && !isset($assigned['Permissions'][$role->NAME])) {
+                $avaliable['Permissions'][$role->NAME] = $role->NAME;
             }
         }
         if($role_cps_admin){
