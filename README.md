@@ -18,19 +18,19 @@ The preferred way to install this extension is through [composer](http://getcomp
 Either run
 
 ```
-php composer.phar require ekalokman/yii2-admin-oci8 "dev-master"
+php composer.phar require ekalokman/yii2-admin-ora-by-kcd "dev-master"
 ```
 
 for dev-master
 
 ```
-php composer.phar require ekalokman/yii2-admin-oci8 "dev-master"
+php composer.phar require ekalokman/yii2-admin-ora-by-kcd "dev-master"
 ```
 
 or add
 
 ```
-"ekalokman/yii2-admin-oci8": "dev-master"
+"ekalokman/yii2-admin-ora-by-kcd": "dev-master"
 ```
 
 to the require section of your `composer.json` file.
