@@ -3,6 +3,8 @@
 namespace ekalokman\AdminOci8\controllers;
 
 use Yii;
+use yii\db\Query;
+use yii\helpers\BaseJson;
 use ekalokman\AdminOci8\models\Assignment;
 use ekalokman\AdminOci8\models\searchs\Assignment as AssignmentSearch;
 use yii\web\Controller;
@@ -98,18 +100,55 @@ class AssignmentController extends Controller
         $authManager = Yii::$app->authManager;
         $avaliable = [];
         $assigned = [];
-        foreach ($authManager->getRolesByUser($id) as $role) {
-            $type = $role->TYPE;
-            $assigned[$type == Item::TYPE_ROLE ? 'Roles' : 'Permissions'][strtoupper($role->NAME)] = strtoupper($role->NAME);
+
+        $getRolesByUser = (new Query())
+                ->select(['QUEST.QST_IMON_AUTH_ITEM.*'])  // Selecting all columns from QST_IMON_AUTH_ITEM
+                ->from('QUEST.QST_IMON_AUTH_ITEM')
+                ->innerJoin('QUEST.QST_IMON_AUTH_ASSIGNMENT', 'QUEST.QST_IMON_AUTH_ASSIGNMENT."ITEM_NAME" = QUEST.QST_IMON_AUTH_ITEM."NAME"')
+                ->where([
+                    'QUEST.QST_IMON_AUTH_ASSIGNMENT.USER_ID' => $id,
+                    'QUEST.QST_IMON_AUTH_ITEM.TYPE' => 1
+                ]);
+
+        $getRolesByUser = $getRolesByUser->all(Yii::$app->db);
+        
+        // $getRolesByUser = $authManager->getRolesByUser($id);
+
+        // echo BaseJson::encode($getRolesByUser['TYPE']);exit;
+
+        foreach ($getRolesByUser as $role) {
+            // echo BaseJson::encode($role);exit;
+            $type = $role['TYPE'];
+            $assigned[$type == Item::TYPE_ROLE ? 'Roles' : 'Permissions'][$role['NAME']] = $role['NAME'];
         }
-        foreach ($authManager->getRoles() as $role) {
-            if (!isset($assigned['Roles'][$role->NAME])) {
-                $avaliable['Roles'][$role->NAME] = $role->NAME;
+
+        $getRoles = (new Query())
+                ->select(['QUEST.QST_IMON_AUTH_ITEM.*'])
+                ->from('QUEST.QST_IMON_AUTH_ITEM')
+                ->where([
+                    'QUEST.QST_IMON_AUTH_ITEM.TYPE' => 1
+                ]);
+
+        $getRoles = $getRoles->all(Yii::$app->db);
+
+        foreach ($getRoles as $role) {
+            if (!isset($assigned['Roles'][$role['NAME']])) {
+                $avaliable['Roles'][$role['NAME']] = $role['NAME'];
             }
         }
-        foreach ($authManager->getPermissions() as $role) {
-            if ($role->NAME[0] !== '/' && !isset($assigned['Permissions'][$role->NAME])) {
-                $avaliable['Permissions'][$role->NAME] = $role->NAME;
+
+        $getPermissions = (new Query())
+                ->select(['QUEST.QST_IMON_AUTH_ITEM.*']) 
+                ->from('QUEST.QST_IMON_AUTH_ITEM')
+                ->where([
+                    'QUEST.QST_IMON_AUTH_ITEM.TYPE' => 2
+                ]);
+
+        $getPermissions = $getPermissions->all(Yii::$app->db);
+
+        foreach ($getPermissions as $role) {
+            if ($role['NAME'][0] !== '/' && !isset($assigned['Permissions'][$role['NAME']])) {
+                $avaliable['Permissions'][$role['NAME']] = $role['NAME'];
             }
         }
 
@@ -134,12 +173,34 @@ class AssignmentController extends Controller
         $roles = $post['roles'];
         $manager = Yii::$app->authManager;
         $error = [];
+
         if ($action == 'assign') {
             foreach ($roles as $name) {
                 try {
-                    $item = $manager->getRole($name);
-                    $item = $item ? : $manager->getPermission($name);
-                    $manager->assign($item, $id);
+                    // Fetch role
+                    $item = (new Query())
+                        ->select(['NAME']) 
+                        ->from('QUEST.QST_IMON_AUTH_ITEM')
+                        ->where(['TYPE' => 1, 'NAME' => $name])
+                        ->one(); 
+
+                    // Fetch permission
+                    $getPermissions = (new Query())
+                        ->select(['NAME']) 
+                        ->from('QUEST.QST_IMON_AUTH_ITEM')
+                        ->where(['TYPE' => 2, 'NAME' => $name])
+                        ->one();
+
+                    // Assign role or permission
+                    $item = ($item ? $item['NAME'] : ($getPermissions ? $getPermissions['NAME'] : null));
+
+                    if ($item) {
+                        Yii::$app->db->createCommand()->insert('QUEST.QST_IMON_AUTH_ASSIGNMENT', [
+                            'ITEM_NAME' => $item, 
+                            'USER_ID' => $id,
+                            'CREATED_AT' => time(),
+                        ])->execute();
+                    }
                 } catch (\Exception $exc) {
                     $error[] = $exc->getMessage();
                 }
@@ -147,20 +208,43 @@ class AssignmentController extends Controller
         } else {
             foreach ($roles as $name) {
                 try {
-                    $item = $manager->getRole($name);
-                    $item = $item ? : $manager->getPermission($name);
-                    $manager->revoke($item, $id);
+                    // Fetch role
+                    $item = (new Query())
+                        ->select(['NAME'])
+                        ->from('QUEST.QST_IMON_AUTH_ITEM')
+                        ->where(['TYPE' => 1, 'NAME' => $name])
+                        ->one();
+
+                    // Fetch permission
+                    $getPermissions = (new Query())
+                        ->select(['NAME']) 
+                        ->from('QUEST.QST_IMON_AUTH_ITEM')
+                        ->where(['TYPE' => 2, 'NAME' => $name])
+                        ->one();
+
+                    // Assign role or permission
+                    $item = ($item ? $item['NAME'] : ($getPermissions ? $getPermissions['NAME'] : null));
+
+                    if ($item) {
+                        Yii::$app->db->createCommand()->delete('QUEST.QST_IMON_AUTH_ASSIGNMENT', [
+                            'ITEM_NAME' => $item,
+                            'USER_ID' => $id,
+                        ])->execute();
+                    }
                 } catch (\Exception $exc) {
                     $error[] = $exc->getMessage();
                 }
             }
         }
+        
         MenuHelper::invalidate();
         Yii::$app->response->format = Response::FORMAT_JSON;
 
-        return [$this->actionRoleSearch($id, 'avaliable', $post['search_av']),
+        return [
+            $this->actionRoleSearch($id, 'avaliable', $post['search_av']),
             $this->actionRoleSearch($id, 'assigned', $post['search_asgn']),
-            $error];
+            $error
+        ];
     }
 
     /**
@@ -178,18 +262,50 @@ class AssignmentController extends Controller
         $authManager = Yii::$app->authManager;
         $avaliable = [];
         $assigned = [];
-        foreach ($authManager->getRolesByUser($id) as $role) {
-            $type = $role->TYPE;
-            $assigned[$type == Item::TYPE_ROLE ? 'Roles' : 'Permissions'][$role->NAME] = $role->NAME;
+
+        $getRolesByUser = (new Query())
+                ->select(['QUEST.QST_IMON_AUTH_ITEM.*'])  // Selecting all columns from QST_IMON_AUTH_ITEM
+                ->from('QUEST.QST_IMON_AUTH_ITEM')
+                ->innerJoin('QUEST.QST_IMON_AUTH_ASSIGNMENT', 'QUEST.QST_IMON_AUTH_ASSIGNMENT."ITEM_NAME" = QUEST.QST_IMON_AUTH_ITEM."NAME"')
+                ->where([
+                    'QUEST.QST_IMON_AUTH_ASSIGNMENT.USER_ID' => $id,
+                    'QUEST.QST_IMON_AUTH_ITEM.TYPE' => 1
+                ]);
+
+        $getRolesByUser = $getRolesByUser->all(Yii::$app->db);
+
+        foreach ($getRolesByUser as $role) {
+            $type = $role['TYPE'];
+            $assigned[$type == Item::TYPE_ROLE ? 'Roles' : 'Permissions'][$role['NAME']] = $role['NAME'];
         }
-        foreach ($authManager->getRoles() as $role) {
-            if (!isset($assigned['Roles'][$role->NAME])) {
-                $avaliable['Roles'][$role->NAME] = $role->NAME;
+
+        $getRoles = (new Query())
+                ->select(['QUEST.QST_IMON_AUTH_ITEM.*'])
+                ->from('QUEST.QST_IMON_AUTH_ITEM')
+                ->where([
+                    'QUEST.QST_IMON_AUTH_ITEM.TYPE' => 1
+                ]);
+
+        $getRoles = $getRoles->all(Yii::$app->db);
+
+        foreach ($getRoles as $role) {
+            if (!isset($assigned['Roles'][$role['NAME']])) {
+                $avaliable['Roles'][$role['NAME']] = $role['NAME'];
             }
         }
-        foreach ($authManager->getPermissions() as $role) {
-            if ($role->NAME[0] !== '/' && !isset($assigned['Permissions'][$role->NAME])) {
-                $avaliable['Permissions'][$role->NAME] = $role->NAME;
+
+        $getPermissions = (new Query())
+                ->select(['QUEST.QST_IMON_AUTH_ITEM.*']) 
+                ->from('QUEST.QST_IMON_AUTH_ITEM')
+                ->where([
+                    'QUEST.QST_IMON_AUTH_ITEM.TYPE' => 2
+                ]);
+
+        $getPermissions = $getPermissions->all(Yii::$app->db);
+
+        foreach ($getPermissions as $role) {
+            if ($role['NAME'][0] !== '/' && !isset($assigned['Permissions'][$role['NAME']])) {
+                $avaliable['Permissions'][$role['NAME']] = $role['NAME'];
             }
         }
         if($role_cps_admin){

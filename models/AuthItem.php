@@ -43,11 +43,11 @@ class AuthItem extends \yii\base\Model
     {
         $this->_item = $item;
         if ($item !== null) {
-            $this->NAME = $item->name;
-            $this->TYPE = $item->type;
-            $this->DESCRIPTION = $item->description;
-            $this->RULENAME = $item->ruleName;
-            $this->DATA = $item->data === null ? null : Json::encode($item->DATA);
+            $this->NAME = $item->NAME;
+            $this->TYPE = $item->TYPE;
+            $this->DESCRIPTION = $item->DESCRIPTION;
+            $this->RULENAME = $item->RULENAME;
+            $this->DATA = $item->DATA === null ? null : Json::encode($item->DATA);
         }
         parent::__construct($config);
     }

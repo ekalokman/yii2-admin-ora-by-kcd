@@ -33,7 +33,7 @@ use yii\helpers\ArrayHelper;
  * @author Misbahul D Munir <misbahuldmunir@gmail.com>
  * @since 1.0
  */
-class Configs extends \yii\base\Object
+class Configs extends \yii\base\BaseObject
 {
     /**
      * @var Connection Database connection.
@@ -91,7 +91,7 @@ class Configs extends \yii\base\Object
         if (self::$_instance === null) {
             $type = ArrayHelper::getValue(Yii::$app->params, 'mdm.admin.configs', []);
             if (is_array($type) && !isset($type['class'])) {
-                $type['class'] = static::className();
+                $type['class'] = static::class;
             }
 
             return self::$_instance = Yii::createObject($type);
